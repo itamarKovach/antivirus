@@ -4,13 +4,15 @@ import tkinter as tk
 from tkinter import ttk, filedialog
 import threading
 
+
 class ScanThread(threading.Thread):
-    def __init__(self, files, api_key, update_callback, error_callback, complete_callback):
+    def __init__(self, files, api_key, update_callback, error_callback, response_callback,complete_callback):
         super().__init__()
         self.files = files
         self.api_key = api_key
         self.update_callback = update_callback
         self.error_callback = error_callback
+        self.response_callback = response_callback
         self.complete_callback = complete_callback
 
     def is_valid_api_key(self, file):
@@ -27,6 +29,8 @@ class ScanThread(threading.Thread):
             response.raise_for_status()  # Raise an exception if the response status code is not 200
             return True
         except requests.exceptions.HTTPError as e:
+            self.response_callback(response)
+            print(response)
             # Handle HTTP errors and display a message to the user
             self.error_callback(f"HTTP Error: {e}")
             return False
@@ -42,7 +46,8 @@ class ScanThread(threading.Thread):
                     result = self.check_file(file)
                     self.update_callback(result, file)
                 else:
-                    self.error_callback("Invalid VirusTotal API key.")
+                    self.error_callback(f"Check response info via " + "https://docs.virustotal.com/reference/errors" + "\nto open the link use cmd")
+                    print(f"Check response info via " + "https://docs.virustotal.com/reference/errors")
                     return
             self.complete_callback("Scan completed.")
         except Exception as e:
@@ -204,11 +209,14 @@ class DirectoryScanner:
 
         def show_error(error_message):
             self.scan_status_var.set(error_message)
+        
+        def show_response(error_message):
+            self.scan_response_var.set(error_message)
 
         def scan_complete(message):
             self.scan_status_var.set(message)
 
-        scan_thread = ScanThread(files, api_key, update_status, show_error, scan_complete)
+        scan_thread = ScanThread(files, api_key, update_status, show_error, show_response, scan_complete)
         scan_thread.start()
 
 
